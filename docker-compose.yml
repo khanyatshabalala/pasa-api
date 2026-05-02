@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL (local dev only) ──────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pasa
+      POSTGRES_PASSWORD: pasa_dev_password
+      POSTGRES_DB: pasa_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pasa -d pasa_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── NestJS API ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: builder   # use the builder stage in dev (has devDeps)
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgresql://pasa:pasa_dev_password@db:5432/pasa_db
+      JWT_SECRET: local-dev-secret-change-in-production
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:5173
+    volumes:
+      - .:/app
+      - /app/node_modules   # don't overwrite container node_modules
+    command: npm run start:dev
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
