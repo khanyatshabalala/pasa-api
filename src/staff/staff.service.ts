@@ -50,7 +50,7 @@ export class StaffService {
       }
     }
 
-    const existing = await (this.prisma as any).authUser.findUnique({
+    const existing = await this.prisma.authUser.findUnique({
       where: { email: data.email.toLowerCase() },
     });
     if (existing) throw new ConflictException('An account with this email already exists');
@@ -59,7 +59,7 @@ export class StaffService {
     const id = crypto.randomUUID();
 
     await this.prisma.$transaction(async (tx) => {
-      await (tx as any).authUser.create({
+      await tx.authUser.create({
         data: { id, email: data.email.toLowerCase(), passwordHash: hashed },
       });
       await tx.profile.create({

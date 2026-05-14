@@ -6,8 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-// ── Enums ──────────────────────────────────────────────────────────────────
-
 enum AppRole {
   parent
   teacher
@@ -17,15 +15,15 @@ enum AppRole {
 }
 
 enum SaProvince {
-  Eastern_Cape    @map("Eastern Cape")
-  Free_State      @map("Free State")
+  Eastern_Cape  @map("Eastern Cape")
+  Free_State    @map("Free State")
   Gauteng
-  KwaZulu_Natal   @map("KwaZulu-Natal")
+  KwaZulu_Natal @map("KwaZulu-Natal")
   Limpopo
   Mpumalanga
-  Northern_Cape   @map("Northern Cape")
-  North_West      @map("North West")
-  Western_Cape    @map("Western Cape")
+  Northern_Cape @map("Northern Cape")
+  North_West    @map("North West")
+  Western_Cape  @map("Western Cape")
 }
 
 enum SchoolPhase {
@@ -74,7 +72,16 @@ enum LinkRequestStatus {
   rejected
 }
 
-// ── Tables ─────────────────────────────────────────────────────────────────
+model AuthUser {
+  id            String   @id @db.Uuid
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("auth_users")
+}
 
 model Profile {
   id               String           @id @db.Uuid
@@ -87,7 +94,7 @@ model Profile {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  supportsSchool School?       @relation("SchoolSupporters", fields: [supportsSchoolId], references: [id])
+  supportsSchool School?        @relation("SchoolSupporters", fields: [supportsSchoolId], references: [id])
   roles          UserRole[]
   notifications  Notification[]
   auditLogs      AuditLog[]
@@ -109,52 +116,51 @@ model District {
 }
 
 model School {
-  id                     String      @id @default(uuid()) @db.Uuid
-  name                   String
-  emisNumber             String      @unique @map("emis_number")
-  phase                  SchoolPhase
-  schoolType             SchoolType  @default(public) @map("school_type")
-  province               SaProvince
-  district               String
-  districtId             String?     @map("district_id") @db.Uuid
-  city                   String?
-  address                String?
-  postalCode             String?     @map("postal_code")
-  phone                  String?
-  email                  String?
-  website                String?
-  principalName          String?     @map("principal_name")
-  logoUrl                String?     @map("logo_url")
-  description            String?
-  motto                  String?
-  learnerCount           Int?        @map("learner_count")
-  feesAnnual             Decimal?    @map("fees_annual") @db.Decimal(10, 2)
-  establishedYear        Int?        @map("established_year")
-  languageOfInstruction  String[]    @map("language_of_instruction")
-  // Admissions
-  gradeFrom              Int?        @map("grade_from")
-  gradeTo                Int?        @map("grade_to")
-  applicationOpen        DateTime?   @map("application_open") @db.Date
-  applicationClose       DateTime?   @map("application_close") @db.Date
-  admissionRequirements  String?     @map("admission_requirements")
-  applicationContact     String?     @map("application_contact")
-  // Performance
-  performanceAvg         Decimal?    @map("performance_avg") @db.Decimal(5, 2)
-  performanceRankDistrict Int?       @map("performance_rank_district")
-  performanceRankProvince Int?       @map("performance_rank_province")
-  performanceRankNational Int?       @map("performance_rank_national")
-  createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime    @updatedAt @map("updated_at")
+  id                      String      @id @default(uuid()) @db.Uuid
+  name                    String
+  emisNumber              String      @unique @map("emis_number")
+  phase                   SchoolPhase
+  schoolType              SchoolType  @default(public) @map("school_type")
+  province                SaProvince
+  district                String
+  districtId              String?     @map("district_id") @db.Uuid
+  city                    String?
+  address                 String?
+  postalCode              String?     @map("postal_code")
+  phone                   String?
+  email                   String?
+  website                 String?
+  principalName           String?     @map("principal_name")
+  logoUrl                 String?     @map("logo_url")
+  description             String?
+  motto                   String?
+  learnerCount            Int?        @map("learner_count")
+  feesAnnual              Decimal?    @map("fees_annual") @db.Decimal(10, 2)
+  establishedYear         Int?        @map("established_year")
+  languageOfInstruction   String[]    @map("language_of_instruction")
+  gradeFrom               Int?        @map("grade_from")
+  gradeTo                 Int?        @map("grade_to")
+  applicationOpen         DateTime?   @map("application_open") @db.Date
+  applicationClose        DateTime?   @map("application_close") @db.Date
+  admissionRequirements   String?     @map("admission_requirements")
+  applicationContact      String?     @map("application_contact")
+  performanceAvg          Decimal?    @map("performance_avg") @db.Decimal(5, 2)
+  performanceRankDistrict Int?        @map("performance_rank_district")
+  performanceRankProvince Int?        @map("performance_rank_province")
+  performanceRankNational Int?        @map("performance_rank_national")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
 
-  districtRel      District?         @relation(fields: [districtId], references: [id])
-  supporters       Profile[]         @relation("SchoolSupporters")
-  roles            UserRole[]
-  learners         Learner[]
-  classes          Class[]
-  calendarEvents   CalendarEvent[]
-  auditLogs        AuditLog[]
-  linkRequests     ParentLinkRequest[]
-  reportCards      ReportCard[]
+  districtRel    District?           @relation(fields: [districtId], references: [id])
+  supporters     Profile[]           @relation("SchoolSupporters")
+  roles          UserRole[]
+  learners       Learner[]
+  classes        Class[]
+  calendarEvents CalendarEvent[]
+  auditLogs      AuditLog[]
+  linkRequests   ParentLinkRequest[]
+  reportCards    ReportCard[]
+  examTimetables ExamTimetable[]
 
   @@map("schools")
 }
@@ -204,8 +210,8 @@ model Learner {
   avatarUrl     String?   @map("avatar_url")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  grade        Grade              @relation(fields: [gradeId], references: [id])
-  school       School             @relation(fields: [schoolId], references: [id])
+  grade        Grade               @relation(fields: [gradeId], references: [id])
+  school       School              @relation(fields: [schoolId], references: [id])
   parentLinks  ParentLink[]
   linkRequests ParentLinkRequest[]
   attendance   Attendance[]
@@ -253,13 +259,13 @@ model ParentLinkRequest {
 }
 
 model Class {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  schoolId     String   @map("school_id") @db.Uuid
-  gradeId      Int      @map("grade_id")
-  teacherUserId String? @map("teacher_user_id") @db.Uuid
-  academicYear Int      @default(2026) @map("academic_year")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  schoolId      String   @map("school_id") @db.Uuid
+  gradeId       Int      @map("grade_id")
+  teacherUserId String?  @map("teacher_user_id") @db.Uuid
+  academicYear  Int      @default(2026) @map("academic_year")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   school      School            @relation(fields: [schoolId], references: [id])
   grade       Grade             @relation(fields: [gradeId], references: [id])
@@ -281,13 +287,13 @@ model ClassEnrollment {
 }
 
 model Attendance {
-  id          String           @id @default(uuid()) @db.Uuid
-  learnerId   String           @map("learner_id") @db.Uuid
-  date        DateTime         @db.Date
-  status      AttendanceStatus
-  notes       String?
-  recordedBy  String?          @map("recorded_by") @db.Uuid
-  recordedAt  DateTime         @default(now()) @map("recorded_at")
+  id         String           @id @default(uuid()) @db.Uuid
+  learnerId  String           @map("learner_id") @db.Uuid
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  notes      String?
+  recordedBy String?          @map("recorded_by") @db.Uuid
+  recordedAt DateTime         @default(now()) @map("recorded_at")
 
   learner Learner @relation(fields: [learnerId], references: [id])
 
@@ -319,6 +325,7 @@ model ReportCard {
   term         Int
   filePath     String   @map("file_path")
   fileName     String   @map("file_name")
+  fileSize     Int?     @map("file_size")
   uploadedBy   String?  @map("uploaded_by") @db.Uuid
   uploadedAt   DateTime @default(now()) @map("uploaded_at")
   notes        String?
@@ -331,19 +338,41 @@ model ReportCard {
 }
 
 model CalendarEvent {
-  id          String    @id @default(uuid()) @db.Uuid
-  schoolId    String?   @map("school_id") @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  schoolId    String?  @map("school_id") @db.Uuid
+  classId     String?  @map("class_id") @db.Uuid
   title       String
   description String?
-  eventDate   DateTime  @map("event_date") @db.Date
-  eventTime   String?   @map("event_time")
-  eventType   String?   @map("event_type")
-  createdBy   String?   @map("created_by") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
+  eventDate   DateTime @map("event_date") @db.Date
+  eventTime   String?  @map("event_time")
+  eventType   String?  @map("event_type")
+  isNational  Boolean  @default(false) @map("is_national")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
 
   school School? @relation(fields: [schoolId], references: [id])
 
   @@map("calendar_events")
+}
+
+model ExamTimetable {
+  id           String   @id @default(uuid()) @db.Uuid
+  schoolId     String   @map("school_id") @db.Uuid
+  subject      String
+  gradeId      Int?     @map("grade_id")
+  examDate     DateTime @map("exam_date") @db.Date
+  startTime    String?  @map("start_time")
+  endTime      String?  @map("end_time")
+  venue        String?
+  notes        String?
+  term         Int
+  academicYear Int      @map("academic_year")
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  school School @relation(fields: [schoolId], references: [id])
+
+  @@map("exam_timetables")
 }
 
 model Notification {

@@ -12,10 +12,6 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import * as bcrypt from 'bcrypt';
 import { AppRole } from '@prisma/client';
 
-// We store hashed passwords in a separate auth table
-// (In production this would be your own auth.users table)
-// For now we piggyback on profiles + a passwords table
-
 const SALT_ROUNDS = 12;
 
 @Injectable()
@@ -26,8 +22,7 @@ export class AuthService {
   ) {}
 
   async signUp(dto: SignUpDto) {
-    // Check email not already taken
-    const existing = await (this.prisma as any).authUser.findUnique({
+    const existing = await this.prisma.authUser.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
     if (existing) throw new ConflictException('An account with this email already exists');
@@ -35,25 +30,23 @@ export class AuthService {
     const hashed = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const id = crypto.randomUUID();
 
-    // Create auth record + profile in a transaction
     await this.prisma.$transaction(async (tx) => {
-      await (tx as any).authUser.create({
+      await tx.authUser.create({
         data: { id, email: dto.email.toLowerCase(), passwordHash: hashed },
       });
       await tx.profile.create({
         data: { id, fullName: dto.fullName },
       });
-      // Default role: parent
       await tx.userRole.create({
         data: { userId: id, role: AppRole.parent },
       });
     });
 
-    return { message: 'Account created. Please verify your email before signing in.' };
+    return { message: 'Account created successfully.' };
   }
 
   async signIn(dto: SignInDto) {
-    const authUser = await (this.prisma as any).authUser.findUnique({
+    const authUser = await this.prisma.authUser.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
     if (!authUser) throw new UnauthorizedException('Incorrect email or password');
@@ -61,15 +54,16 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, authUser.passwordHash);
     if (!valid) throw new UnauthorizedException('Incorrect email or password');
 
-    const roles = await this.prisma.userRole.findMany({
-      where: { userId: authUser.id },
-      select: { role: true, schoolId: true },
-    });
-
-    const profile = await this.prisma.profile.findUnique({
-      where: { id: authUser.id },
-      select: { fullName: true, subscriptionTier: true },
-    });
+    const [roles, profile] = await Promise.all([
+      this.prisma.userRole.findMany({
+        where: { userId: authUser.id },
+        select: { role: true, schoolId: true },
+      }),
+      this.prisma.profile.findUnique({
+        where: { id: authUser.id },
+        select: { fullName: true, subscriptionTier: true, avatarUrl: true },
+      }),
+    ]);
 
     const token = this.jwt.sign({
       sub: authUser.id,
@@ -83,6 +77,7 @@ export class AuthService {
         id: authUser.id,
         email: authUser.email,
         fullName: profile?.fullName,
+        avatarUrl: profile?.avatarUrl,
         subscriptionTier: profile?.subscriptionTier,
         roles,
       },
@@ -90,7 +85,7 @@ export class AuthService {
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
-    const authUser = await (this.prisma as any).authUser.findUnique({
+    const authUser = await this.prisma.authUser.findUnique({
       where: { id: userId },
     });
     if (!authUser) throw new UnauthorizedException();
@@ -99,7 +94,7 @@ export class AuthService {
     if (!valid) throw new BadRequestException('Current password is incorrect');
 
     const hashed = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
-    await (this.prisma as any).authUser.update({
+    await this.prisma.authUser.update({
       where: { id: userId },
       data: { passwordHash: hashed },
     });
@@ -114,5 +109,16 @@ export class AuthService {
     });
     if (!profile) throw new UnauthorizedException();
     return profile;
+  }
+
+  async updateProfile(userId: string, data: { fullName?: string; phone?: string }) {
+    return this.prisma.profile.update({
+      where: { id: userId },
+      data: {
+        ...(data.fullName !== undefined && { fullName: data.fullName }),
+        ...(data.phone !== undefined && { phone: data.phone || null }),
+      },
+      select: { id: true, fullName: true, phone: true, avatarUrl: true, subscriptionTier: true },
+    });
   }
 }

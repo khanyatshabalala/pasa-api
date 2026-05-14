@@ -40,4 +40,12 @@ export class AuthController {
   changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
     return this.auth.changePassword(user.id, dto);
   }
+
+  @Put('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update profile name and phone' })
+  updateProfile(@CurrentUser() user: any, @Body() body: { fullName?: string; phone?: string }) {
+    return this.auth.updateProfile(user.id, body);
+  }
 }
